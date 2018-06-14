@@ -2,31 +2,33 @@
 from imutils.face_utils.helpers import FACIAL_LANDMARKS_IDXS
 from imutils.face_utils.helpers import shape_to_np
 from imutils.face_utils import rect_to_bb
+import matplotlib.pyplot as plt
 import numpy as np
 import imutils
 import dlib
 import cv2
 import os
-from shutil import copy
-import matplotlib.pyplot as plt
+import shutil
 
 p = 1.0 # weight for classification
-data_num = 10 # number of data
+data_num = 15 # number of data
 alignDir = os.path.abspath(os.path.join('.', 'aligned'))
 notAlignDir = os.path.abspath(os.path.join('.', 'not aligned'))
-imageDir = os.path.abspath(os.path.join('.', 'image'))
-if not os.path.exists(alignDir):
-    os.mkdir(alignDir)
-if not os.path.exists(notAlignDir):
-    os.mkdir(notAlignDir)
-leftEyes = np.zeros(shape = [data_num, 2], dtype = int)
-rightEyes = np.zeros(shape = [data_num, 2], dtype = int)
+imageDir = os.path.abspath(os.path.join('.', 'image_test'))
+if os.path.exists(alignDir):
+    shutil.rmtree(alignDir)
+os.mkdir(alignDir)
+if os.path.exists(notAlignDir) :
+    shutil.rmtree(notAlignDir)
+os.mkdir(notAlignDir)
+leftEyes = [0]*data_num
+rightEyes = [0]*data_num
 leftEyeStat = []
 rightEyeStat = []
-alignedLeftEyes = np.zeros(shape = 0, dtype = int)
-notAlignedLeftEyes = np.zeros(shape = 0, dtype = int)
-alignedRightEyes = np.zeros(shape = 0, dtype = int)
-notAlignedRightEyes = np.zeros(shape = 0, dtype = int)
+alignedLeftEyes = []
+notAlignedLeftEyes = []
+alignedRightEyes = []
+notAlignedRightEyes = []
 class FaceAligner:
     def __init__(self, predictor, desiredLeftEye=(0.35, 0.35),
         desiredFaceWidth=None, desiredFaceHeight=None):
@@ -56,52 +58,10 @@ class FaceAligner:
         # compute the center of mass for each eye
         leftEyeCenter = leftEyePts.mean(axis=0).astype("int")
         #print(leftEyeCenter)
-        leftEyes[number] = leftEyeCenter
+        leftEyes[number] = leftEyeCenter.tolist()
         rightEyeCenter = rightEyePts.mean(axis=0).astype("int")
         #print(rightEyeCenter)
-        rightEyes[number] = rightEyeCenter
-        '''
-        # compute the angle between the eye centroids
-        dY = rightEyeCenter[1] - leftEyeCenter[1]
-        dX = rightEyeCenter[0] - leftEyeCenter[0]
-        angle = np.degrees(np.arctan2(dY, dX)) - 180
-        
-        # compute the desired right eye x-coordinate based on the
-        # desired x-coordinate of the left eye
-        desiredRightEyeX = 1.0 - self.desiredLeftEye[0]
- 
-        # determine the scale of the new resulting image by taking
-        # the ratio of the distance between eyes in the *current*
-        # image to the ratio of distance between eyes in the
-        # *desired* image
-        dist = np.sqrt((dX ** 2) + (dY ** 2))
-        desiredDist = (desiredRightEyeX - self.desiredLeftEye[0])
-        desiredDist *= self.desiredFaceWidth
-        scale = desiredDist / dist
-        
-        # compute center (x, y)-coordinates (i.e., the median point)
-        # between the two eyes in the input image
-        eyesCenter = ((leftEyeCenter[0] + rightEyeCenter[0]) // 2,
-            (leftEyeCenter[1] + rightEyeCenter[1]) // 2)
- 
-        # grab the rotation matrix for rotating and scaling the face
-        M = cv2.getRotationMatrix2D(eyesCenter, angle, scale)
- 
-        # update the translation component of the matrix
-        tX = self.desiredFaceWidth * 0.5
-        tY = self.desiredFaceHeight * self.desiredLeftEye[1]
-        M[0, 2] += (tX - eyesCenter[0])
-        M[1, 2] += (tY - eyesCenter[1])
-        
-        # apply the affine transformation
-        (w, h) = (self.desiredFaceWidth, self.desiredFaceHeight)
-        output = cv2.warpAffine(image, M, (w, h),
-            flags=cv2.INTER_CUBIC)
- 
-        # return the aligned face
-        return output
-        
-        '''
+        rightEyes[number] = rightEyeCenter.tolist()
 ''' previous save function(original)
 def save(is_aligned, number) :
     if is_aligned is True :
@@ -115,11 +75,11 @@ def save(is_aligned, number) :
     global alignedRightEyes
     global notAlignedRightEyes
     if is_aligned is True :
-        alignedLeftEyes = np.append(alignedLeftEyes, leftEyes[number-1], axis = 0)
-        #alignedRightEyes = np.append(alignedRightEyes, rightEyes[number-1])
+        alignedLeftEyes.append(leftEyes[number-1])
+        alignedRightEyes.append(rightEyes[number-1])
     else :
-        notAlignedLeftEyes = np.append(notAlignedLeftEyes, leftEyes[number-1], axis = 0)
-        #notAlignedRightEyes = np.append(notAlignedRightEyes, rightEyes[number-1])
+        notAlignedLeftEyes.append(leftEyes[number-1])
+        notAlignedRightEyes.append(rightEyes[number-1])
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("predictor.dat")
 for i in range(1, data_num + 1) :
@@ -136,14 +96,16 @@ for i in range(1, data_num + 1) :
         #print((x,y,w,h))
         faceOrig = imutils.resize(image[y:y + h, x:x + w], width=256)
         fa.align(image, gray, rect, i - 1)
-leftEyeStat.append(np.average(leftEyes[:,0])) # average of x-coord of left eyes
-leftEyeStat.append(np.average(leftEyes[:,1])) # average of y-coord of left eyes
-leftEyeStat.append(np.std(leftEyes[:,0])) # std.dev of x-coord of left eyes
-leftEyeStat.append(np.std(leftEyes[:,1])) # std.dev of y-coord of left eyes
-rightEyeStat.append(np.average(rightEyes[:,0])) # average of x-coord of right eyes
-rightEyeStat.append(np.average(rightEyes[:,1])) # average of y-coord of right eyes
-rightEyeStat.append(np.std(rightEyes[:,0])) # std.dev of x-coord of right eyes
-rightEyeStat.append(np.std(rightEyes[:,1])) # std.dev of y-coord of right eyes
+leftEyes_arr = np.array(leftEyes)
+rightEyes_arr = np.array(rightEyes)
+leftEyeStat.append(np.average(np.array(leftEyes)[:,0])) # average of x-coord of left eyes
+leftEyeStat.append(np.average(np.array(leftEyes)[:,1])) # average of y-coord of left eyes
+leftEyeStat.append(np.std(np.array(leftEyes)[:,0])) # std.dev of x-coord of left eyes
+leftEyeStat.append(np.std(np.array(leftEyes)[:,1])) # std.dev of y-coord of left eyes
+rightEyeStat.append(np.average(np.array(rightEyes)[:,0])) # average of x-coord of right eyes
+rightEyeStat.append(np.average(np.array(rightEyes)[:,1])) # average of y-coord of right eyes
+rightEyeStat.append(np.std(np.array(rightEyes)[:,0])) # std.dev of x-coord of right eyes
+rightEyeStat.append(np.std(np.array(rightEyes)[:,1])) # std.dev of y-coord of right eyes
 for i in range(1, len(leftEyes) + 1) :
     flag = False
     if (leftEyeStat[0] - p*leftEyeStat[2]) <= leftEyes[i-1][0] <= (leftEyeStat[0] + p*leftEyeStat[2]) :
@@ -152,8 +114,25 @@ for i in range(1, len(leftEyes) + 1) :
                 if (rightEyeStat[1] - p*rightEyeStat[3]) <= rightEyes[i-1][1] <= (rightEyeStat[1] + p*rightEyeStat[3]) : 
                     flag = True
     save(flag, i)
-    colors = "r" * data_num + "b" * data_num
-print(notAlignedLeftEyes + alignedLeftEyes)
-#print(notAlignedLeftEyes[:,0] + alignedLeftEyes[:,0])
-#print(notAlignedLeftEyes[:,1] + alignedLeftEyes[:,1])
-#plt.scatter(notAlignedLeftEyes[:,0] + alignedLeftEyes[:,0], notAlignedLeftEyes[:,1] + alignedLeftEyes[:,1], color = colors)
+
+colors = "r" * len(notAlignedLeftEyes) + "b" * len(alignedLeftEyes)
+print(alignedLeftEyes)
+print(notAlignedLeftEyes)
+if alignedLeftEyes != [] and notAlignedLeftEyes != [] :
+    x_left_arr = np.append(np.array(notAlignedLeftEyes)[:,0], np.array(alignedLeftEyes)[:,0])
+    y_left_arr = np.append(np.array(notAlignedLeftEyes)[:,1], np.array(alignedLeftEyes)[:,1])
+    x_right_arr = np.append(np.array(notAlignedRightEyes)[:,0], np.array(alignedRightEyes)[:,0])
+    y_right_arr = np.append(np.array(notAlignedRightEyes)[:,1], np.array(alignedRightEyes)[:,1])
+figure = plt.figure()
+plt.scatter(x_left_arr, y_left_arr, color = colors)
+plt.scatter(x_right_arr, y_right_arr, color = colors)
+plt.axvline(x = leftEyeStat[0] + leftEyeStat[2], linewidth = 2, color = 'r')
+plt.axvline(x = leftEyeStat[0] - leftEyeStat[2], linewidth = 2, color = 'r')
+plt.axhline(y = leftEyeStat[1] - leftEyeStat[3], linewidth = 2, color = 'r')
+plt.axhline(y = leftEyeStat[1] + leftEyeStat[3], linewidth = 2, color = 'r')
+plt.axvline(x = rightEyeStat[0] + rightEyeStat[2], linewidth = 2, color = 'b')
+plt.axvline(x = rightEyeStat[0] - rightEyeStat[2], linewidth = 2, color = 'b')
+plt.axhline(y = rightEyeStat[1] - rightEyeStat[3], linewidth = 2, color = 'b')
+plt.axhline(y = rightEyeStat[1] + rightEyeStat[3], linewidth = 2, color = 'b')
+plt.grid(True)
+plt.show()
