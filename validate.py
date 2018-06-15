@@ -11,7 +11,7 @@ import os
 import shutil
 
 p = 1.0 # weight for classification
-data_num = 15 # number of data
+data_num = 1000 # number of data
 alignDir = os.path.abspath(os.path.join('.', 'aligned'))
 notAlignDir = os.path.abspath(os.path.join('.', 'not aligned'))
 imageDir = os.path.abspath(os.path.join('.', 'image_test'))
@@ -94,8 +94,12 @@ for i in range(1, data_num + 1) :
        # print(rect)
         (x, y, w, h) = rect_to_bb(rect)
         #print((x,y,w,h))
-        faceOrig = imutils.resize(image[y:y + h, x:x + w], width=256)
+        #faceOrig = imutils.resize(image[y:y + h, x:x + w], width=256)
         fa.align(image, gray, rect, i - 1)
+while 0 in leftEyes :
+    leftEyes.remove(0)
+while 0 in rightEyes :
+    rightEyes.remove(0)    
 leftEyes_arr = np.array(leftEyes)
 rightEyes_arr = np.array(rightEyes)
 leftEyeStat.append(np.average(np.array(leftEyes)[:,0])) # average of x-coord of left eyes
@@ -115,24 +119,44 @@ for i in range(1, len(leftEyes) + 1) :
                     flag = True
     save(flag, i)
 
-colors = "r" * len(notAlignedLeftEyes) + "b" * len(alignedLeftEyes)
-print(alignedLeftEyes)
-print(notAlignedLeftEyes)
+colors = "r" * len(notAlignedLeftEyes) + "b" * len(alignedLeftEyes) + "r" * len(notAlignedRightEyes) + "b" * len(alignedRightEyes)
+color_left = "r" * len(notAlignedLeftEyes) + "b" * len(alignedLeftEyes)
+color_right = "m" * len(notAlignedRightEyes) + "c" * len(alignedRightEyes)
+#print(alignedLeftEyes)
+#print(notAlignedLeftEyes)
+
 if alignedLeftEyes != [] and notAlignedLeftEyes != [] :
     x_left_arr = np.append(np.array(notAlignedLeftEyes)[:,0], np.array(alignedLeftEyes)[:,0])
     y_left_arr = np.append(np.array(notAlignedLeftEyes)[:,1], np.array(alignedLeftEyes)[:,1])
     x_right_arr = np.append(np.array(notAlignedRightEyes)[:,0], np.array(alignedRightEyes)[:,0])
     y_right_arr = np.append(np.array(notAlignedRightEyes)[:,1], np.array(alignedRightEyes)[:,1])
+    '''
+    x_arr = np.append(leftEyeStat[0]-np.append(np.array(notAlignedLeftEyes)[:,0], np.array(alignedLeftEyes)[:,0]),
+                           rightEyeStat[0]-np.append(np.array(notAlignedRightEyes)[:,0], np.array(alignedRightEyes)[:,0]))
+    y_arr = np.append(leftEyeStat[1]-np.append(np.array(notAlignedLeftEyes)[:,1], np.array(alignedLeftEyes)[:,1]),
+                           rightEyeStat[1]-np.append(np.array(notAlignedRightEyes)[:,1], np.array(alignedRightEyes)[:,1]))
+    '''
 figure = plt.figure()
-plt.scatter(x_left_arr, y_left_arr, color = colors)
-plt.scatter(x_right_arr, y_right_arr, color = colors)
-plt.axvline(x = leftEyeStat[0] + leftEyeStat[2], linewidth = 2, color = 'r')
-plt.axvline(x = leftEyeStat[0] - leftEyeStat[2], linewidth = 2, color = 'r')
-plt.axhline(y = leftEyeStat[1] - leftEyeStat[3], linewidth = 2, color = 'r')
-plt.axhline(y = leftEyeStat[1] + leftEyeStat[3], linewidth = 2, color = 'r')
-plt.axvline(x = rightEyeStat[0] + rightEyeStat[2], linewidth = 2, color = 'b')
-plt.axvline(x = rightEyeStat[0] - rightEyeStat[2], linewidth = 2, color = 'b')
-plt.axhline(y = rightEyeStat[1] - rightEyeStat[3], linewidth = 2, color = 'b')
-plt.axhline(y = rightEyeStat[1] + rightEyeStat[3], linewidth = 2, color = 'b')
+plt.scatter(x_left_arr, y_left_arr, color = color_left)
+plt.scatter(x_right_arr, y_right_arr, color = color_right)
+plt.axvline(x = leftEyeStat[0] + leftEyeStat[2], linewidth = 1, color = 'r')
+plt.axvline(x = leftEyeStat[0] - leftEyeStat[2], linewidth = 1, color = 'r')
+plt.axhline(y = leftEyeStat[1] - leftEyeStat[3], linewidth = 1, color = 'r')
+plt.axhline(y = leftEyeStat[1] + leftEyeStat[3], linewidth = 1, color = 'r')
+plt.axvline(x = rightEyeStat[0] + rightEyeStat[2], linewidth = 1, color = 'b')
+plt.axvline(x = rightEyeStat[0] - rightEyeStat[2], linewidth = 1, color = 'b')
+plt.axhline(y = rightEyeStat[1] - rightEyeStat[3], linewidth = 1, color = 'b')
+plt.axhline(y = rightEyeStat[1] + rightEyeStat[3], linewidth = 1, color = 'b')
+'''
+plt.scatter(x_arr, y_arr, color = colors)
+plt.axvline(x = leftEyeStat[2], linewidth = 1, color = 'r')
+plt.axvline(x = - leftEyeStat[2], linewidth = 1, color = 'r')
+plt.axhline(y = - leftEyeStat[3], linewidth = 1, color = 'r')
+plt.axhline(y = leftEyeStat[3], linewidth = 1, color = 'r')
+plt.axvline(x = rightEyeStat[2], linewidth = 1, color = 'b')
+plt.axvline(x = - rightEyeStat[2], linewidth = 1, color = 'b')
+plt.axhline(y = - rightEyeStat[3], linewidth = 1, color = 'b')
+plt.axhline(y = rightEyeStat[3], linewidth = 1, color = 'b')
+'''
 plt.grid(True)
 plt.show()
